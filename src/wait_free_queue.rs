@@ -36,6 +36,7 @@ impl<T> Clone for WaitFreeQueue<T>{
 impl<T> WaitFreeQueue<T>{
 
     pub fn new(mut data: Vec<T>) -> Self {
+        data.shrink_to_fit();
         let size = data.len();
         let ptr = data.as_mut_ptr();
         mem::forget(data);
@@ -62,9 +63,9 @@ impl<T> WaitFreeQueue<T>{
         }
     }
 
-    /// Returns the currents state of the data being stored. All elements T are copied
+    /// Returns the currents state of the data being stored. All elements of Vec<T> are copied
     /// regardless of whether T is Copy. If T is not Copy, access to both elements might lead to
-    /// memory safety problems.
+    /// memory safety problems.:
     pub unsafe fn get_current_state(&self) -> Vec<T> {
         let mut ans = Vec::with_capacity(self.size);
 
