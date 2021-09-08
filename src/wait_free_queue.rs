@@ -63,18 +63,20 @@ impl<T> WaitFreeQueue<T>{
         }
     }
 
-    /// Returns the currents state of the data being stored. All elements of Vec<T> are copied
-    /// regardless of whether T is Copy. If T is not Copy, access to both elements might lead to
-    /// memory safety problems.:
-    pub unsafe fn get_current_state(&self) -> Vec<T> {
-        let mut ans = Vec::with_capacity(self.size);
-
-        for i in 0..self.size{
-            let elem = ptr::read(self.ptr.offset(i as isize));
-            ans.push(elem);
+    pub fn get_data(&self) -> &[T] {
+        unsafe {
+            let data = std::slice::from_raw_parts(self.ptr, self.size);
+            data
         }
+    }
 
-        ans
+    pub unsafe fn exhaustive_read(mut self) -> Vec<T>{
+        assert_eq!(self.n_copies.load(Ordering::Relaxed), 0,
+                   "Exhaustive read has been called while other copies exist!");
+
+        let data = Vec::from_raw_parts(self.ptr, self.size, self.size);
+        self.ptr = ptr::null_mut();
+        data
     }
 }
 
@@ -84,8 +86,10 @@ impl<T> Drop for WaitFreeQueue<T>{
             self.n_copies.fetch_sub(1, Ordering::Relaxed);
         }
         else {
-            unsafe {
-                let _vec = Vec::from_raw_parts(self.ptr, self.size, self.size);}
+            if !self.ptr.is_null() {
+                unsafe {
+                    let _vec = Vec::from_raw_parts(self.ptr, self.size, self.size);}
+            }
         }
     }
 }

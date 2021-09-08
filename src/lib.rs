@@ -79,9 +79,9 @@ mod tests {
                 Err(e) => {panic!(e)}
             };
         }
-        let new_data = unsafe {queue.get_current_state()};
+        let new_data = queue.get_data();
 
-        assert_eq!(new_data, vec![2; 100]);
+        assert_eq!(new_data, vec![2; 100].as_slice());
 
     }
 
