@@ -51,6 +51,8 @@ impl<T> WaitFreeQueue<T>{
         }
     }
 
+    /// Returns the next element of the stored data according to the global header.
+    /// Might be called concurrently from multiple threads.
     pub fn get_next_mut(&mut self) -> Option<&mut T>{
         let offset = self.header.fetch_add(1, Ordering::Relaxed);
         if offset >= self.size as isize {
@@ -63,6 +65,7 @@ impl<T> WaitFreeQueue<T>{
         }
     }
 
+    /// Returns a slice of internal data. Might be called inside a thread, safe operation.
     pub fn get_data(&self) -> &[T] {
         unsafe {
             let data = std::slice::from_raw_parts(self.ptr, self.size);
@@ -70,13 +73,18 @@ impl<T> WaitFreeQueue<T>{
         }
     }
 
-    pub unsafe fn exhaustive_read(mut self) -> Vec<T>{
-        assert_eq!(self.n_copies.load(Ordering::Relaxed), 0,
-                   "Exhaustive read has been called while other copies exist!");
+    /// Reads internal data exhaustively. The struct example it has been called on is consumed.
+    /// Returns Err if the struct example has living copies, otherwise returns Ok(data)
+    pub fn exhaustive_read(mut self) -> Result<Vec<T>, String>{
+        if self.n_copies.load(Ordering::Relaxed) != 0{
+            Err("Exhaustive read has been called while other copies exist!".to_string())
+        }
+        else{
+            let data = unsafe {Vec::from_raw_parts(self.ptr, self.size, self.size)};
+            self.ptr = ptr::null_mut();
+            Ok(data)
+        }
 
-        let data = Vec::from_raw_parts(self.ptr, self.size, self.size);
-        self.ptr = ptr::null_mut();
-        data
     }
 }
 
